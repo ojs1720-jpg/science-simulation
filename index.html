@@ -151,6 +151,23 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             line-height: 1.5;
         }
+    .simulation-container {
+        display: flex !important;
+        flex-direction: row !important; /* 가로로 나열 */
+        justify-content: center !important;
+        align-items: flex-start !important;
+        gap: 10px !important;
+        width: 100% !important;
+        min-width: 1000px !important; /* 가로 폭 강제 유지 */
+        margin: 0 auto !important;
+        transform: scale(0.75); /* 전체 크기를 75%로 줄여서 한 화면에 담기 */
+        transform-origin: top center;
+    }
+
+    .simulation-set {
+        flex: 0 0 auto !important;
+        width: 500px !important; /* 각 실험 세트 가로 크기 고정 */
+    }
     </style>
 </head>
 <body>
