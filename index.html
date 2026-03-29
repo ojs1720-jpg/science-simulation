@@ -46,19 +46,38 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
 
-        .simulation-container {
-            display: flex;
-            justify-content: center;
-            gap: 40px;
-            flex-wrap: wrap;
-            margin-bottom: 30px;
-        }
-        
-        .simulation-set {
-            display: flex;
-            gap: 20px;
-            align-items: flex-end; 
-        }
+        /* 기존에 넣었던 내용을 지우고 이 내용으로 교체하세요 */
+    .simulation-container {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: center !important;
+        align-items: flex-start !important;
+        gap: 30px !important; /* 두 실험 장치 사이의 간격 */
+        width: 100% !important;
+        min-width: 1300px !important; /* 가로로 나란히 서기 위한 충분한 폭 */
+        margin: 0 auto !important;
+        transform: scale(0.65); /* 구글 사이트 도구 폭에 맞춰 전체적으로 축소 */
+        transform-origin: top center;
+    }
+
+    .simulation-set {
+        display: flex !important;
+        flex-direction: row !important; /* 표와 수조를 가로로 배치 */
+        align-items: flex-start !important;
+        flex: 0 0 auto !important;
+        width: 600px !important; /* 표와 수조를 모두 담을 수 있는 넉넉한 너비 */
+    }
+
+    .table-wrapper {
+        min-width: 220px !important; /* 표가 찌그러지지 않게 최소 너비 강제 */
+        margin-right: 15px !important;
+    }
+
+    .data-table {
+        width: 100% !important;
+        font-size: 14px !important; /* 글자가 너무 크면 표가 넓어지므로 조절 */
+        white-space: nowrap !important; /* 표 안의 글자가 아래로 꺾이지 않게 방지 */
+    }
 
         .chamber-wrapper {
             display: flex;
