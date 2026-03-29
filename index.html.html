@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>기온에 따른 포화 수증기량 실험</title>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background-color: #f4f7f6;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 { color: #333; margin-bottom: 5px; }
+        .description { color: #555; margin-bottom: 20px; font-size: 16px; }
+        
+        #controls { margin-bottom: 15px; }
+        button {
+            padding: 12px 24px;
+            font-size: 18px;
+            font-weight: bold;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: background 0.3s;
+        }
+        button:hover { background-color: #45a049; }
+        button#resetBtn { background-color: #f44336; }
+        button#resetBtn:hover { background-color: #d32f2f; }
+        button:disabled { background-color: #9e9e9e; cursor: not-allowed; }
+
+        .timer-box {
+            font-size: 26px;
+            font-weight: bold;
+            color: #333;
+            background-color: #fff;
+            padding: 12px 35px;
+            border: 2px solid #ccc;
+            border-radius: 30px;
+            display: inline-block;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .simulation-container {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+        
+        .simulation-set {
+            display: flex;
+            gap: 20px;
+            align-items: flex-end; 
+        }
+
+        .chamber-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .chamber-stats {
+            margin-bottom: 15px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            width: 360px; 
+        }
+
+        .chamber-stats h2 { margin: 0 0 10px 0; font-size: 28px; }
+        .chamber-stats .temp20 { color: #03a9f4; }
+        .chamber-stats .temp70 { color: #ff5722; }
+        .status { font-size: 16px; font-weight: bold; color: #555; }
+
+        /* 밀폐된 용기 디자인 */
+        .chamber {
+            background-color: white;
+            border: 5px solid #b0bec5;
+            border-top: 22px solid #607d8b; 
+            border-bottom: 10px solid #90a4ae;
+            border-radius: 8px;
+            width: 400px; 
+            height: 450px; 
+            position: relative;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+            overflow: hidden;
+            background-image: radial-gradient(#e0e0e0 1px, transparent 1px);
+            background-size: 25px 25px; 
+        }
+
+        canvas {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 데이터 표 디자인 */
+        .table-wrapper {
+            background: white;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            width: 330px; 
+            height: 450px; 
+            overflow-y: auto;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        
+        .data-table thead {
+            position: sticky;
+            top: 0;
+            background-color: #eceff1;
+            z-index: 1;
+            box-shadow: 0 2px 2px rgba(0,0,0,0.1);
+        }
+
+        .data-table th, .data-table td {
+            border: 1px solid #ddd;
+            padding: 10px 5px;
+            text-align: center;
+        }
+
+        .data-table th { font-weight: bold; color: #333; }
+        .data-table td { color: #555; }
+
+        .notice-box {
+            display: inline-block;
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            max-width: 650px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>온도에 따른 포화 수증기량의 변화</h1>
+    <p class="description">밀폐된 공간 안에서 시간에 따라 공기 중으로 나가는 입자와 돌아오는 입자 수를 관찰해 보세요. (10시간 후 종료)</p>
+
+    <div id="controls">
+        <button id="startBtn">실험 시작</button>
+        <button id="resetBtn">초기화</button>
+    </div>
+
+    <div class="timer-box">
+        실험 시간: <span id="timerDisplay">00:00</span>
+    </div>
+
+    <div class="simulation-container">
+        
+        <div class="simulation-set">
+            <div class="table-wrapper">
+                <table class="data-table" id="table20">
+                    <thead>
+                        <tr>
+                            <th>시간</th>
+                            <th>증발한<br>입자 수</th>
+                            <th>응결된<br>입자 수</th>
+                            <th>공기 중의<br>수증기량</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="chamber-wrapper">
+                <div class="chamber-stats">
+                    <h2>기온 <span class="temp20">20°C</span></h2>
+                    <div class="status">현재 공기 중의 수증기 입자 수: <span id="vaporCount20">0</span>개</div>
+                </div>
+                <div class="chamber">
+                    <canvas id="canvas20" width="400" height="450"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="simulation-set">
+            <div class="chamber-wrapper">
+                <div class="chamber-stats">
+                    <h2>기온 <span class="temp70">70°C</span></h2>
+                    <div class="status">현재 공기 중의 수증기 입자 수: <span id="vaporCount70">0</span>개</div>
+                </div>
+                <div class="chamber">
+                    <canvas id="canvas70" width="400" height="450"></canvas>
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table class="data-table" id="table70">
+                    <thead>
+                        <tr>
+                            <th>시간</th>
+                            <th>증발한<br>입자 수</th>
+                            <th>응결된<br>입자 수</th>
+                            <th>공기 중의<br>수증기량</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="notice-box">
+        💡 동적 평형(포화 상태)에 도달하면 증발과 응결이 멈추는 것이 아니라,<br>나가는 입자와 들어오는 입자 수가 같아져서 변화가 없는 것처럼 보이는 거랍니다!
+    </div>
+
+    <script>
+        // 20도 데이터: 3시간에 포화 도달 (2시간에 18, 3시간에 20)
+        const tableData20 = [
+            { evap: 12, cond: 0, cum: 12 },  // 1시간: 급격히 증가 (+12)
+            { evap: 9, cond: 3, cum: 18 },   // 2시간: 증가폭 감소 (+6), 누적 18
+            { evap: 6, cond: 4, cum: 20 },   // 3시간: 포화 도달 (+2), 누적 20
+            { evap: 5, cond: 5, cum: 20 },   // 4시간: 평형 유지
+            { evap: 4, cond: 4, cum: 20 },   // 5시간: 평형 유지
+            { evap: 6, cond: 6, cum: 20 },   // 6시간: 평형 유지
+            { evap: 5, cond: 5, cum: 20 },   // 7시간
+            { evap: 3, cond: 3, cum: 20 },   // 8시간
+            { evap: 4, cond: 4, cum: 20 },   // 9시간
+            { evap: 5, cond: 5, cum: 20 }    // 10시간
+        ];
+
+        // 70도 데이터: 6시간에 포화 도달 (5시간에 163, 6시간에 170) - 기존 유지
+        const tableData70 = [
+            { evap: 60, cond: 0, cum: 60 },     
+            { evap: 55, cond: 15, cum: 100 },   
+            { evap: 50, cond: 20, cum: 130 },   
+            { evap: 45, cond: 25, cum: 150 },   
+            { evap: 43, cond: 30, cum: 163 },   
+            { evap: 40, cond: 33, cum: 170 },   
+            { evap: 45, cond: 45, cum: 170 },   
+            { evap: 40, cond: 40, cum: 170 },
+            { evap: 50, cond: 50, cum: 170 },
+            { evap: 42, cond: 42, cum: 170 }
+        ];
+
+        let isRunning = false;
+        let animationId;
+        let virtualMinutes = 0;
+        let frameCount = 0;
+        const END_MINUTES = 600; // 10시간
+
+        function formatTime(minutes) {
+            let h = Math.floor(minutes / 60);
+            let m = minutes % 60;
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+
+        class Simulator {
+            constructor(canvasId, countId, tableId, temperature, hourlyData) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.countEl = document.getElementById(countId);
+                this.tableBody = document.querySelector(`#${tableId} tbody`);
+                
+                this.width = this.canvas.width;
+                this.height = this.canvas.height;
+                
+                this.temperature = temperature;
+                this.hourlyData = hourlyData; // 전달받은 정해진 누적 데이터
+                this.particles = [];
+
+                // 수조 설정
+                this.cupWidth = 220; 
+                this.cupHeight = 160; 
+                this.cupX = (this.width - this.cupWidth) / 2;
+                this.cupBottom = this.height; 
+                
+                this.initialWaterHeight = 130;
+                this.waterHeight = this.initialWaterHeight;
+                // 입자 1개당 물 높이 감소량 
+                this.waterPerParticle = 0.65; 
+            }
+
+            reset() {
+                this.particles = [];
+                this.waterHeight = this.initialWaterHeight;
+                this.countEl.innerText = '0';
+                this.tableBody.innerHTML = ''; 
+                this.draw();
+            }
+
+            // 표에 정확한 데이터 기록
+            recordHourlyData(hour) {
+                if (hour < 1 || hour > 10) return;
+                let data = this.hourlyData[hour - 1];
+                
+                let row = this.tableBody.insertRow();
+                row.insertCell(0).innerText = `${hour}시간`;
+                row.insertCell(1).innerText = `${data.evap}개`;
+                row.insertCell(2).innerText = `${data.cond}개`;
+                row.insertCell(3).innerText = `${data.cum}`;
+                
+                let wrapper = this.tableBody.parentElement.parentElement;
+                wrapper.scrollTop = wrapper.scrollHeight;
+            }
+
+            spawnParticle() {
+                this.particles.push({
+                    x: this.cupX + 20 + Math.random() * (this.cupWidth - 40),
+                    y: this.cupBottom - this.waterHeight - 8,
+                    vx: (Math.random() - 0.5) * 2.0, 
+                    vy: -Math.random() * 2.0 - 1.0,  
+                    life: 0
+                });
+            }
+
+            update(currentVirtualMinutes) {
+                if (!isRunning) return;
+
+                let currentHour = Math.floor(currentVirtualMinutes / 60);
+                let currentMinuteOfHour = currentVirtualMinutes % 60;
+                
+                // 이전 시간의 누적 값과 목표 시간의 누적 값을 바탕으로 현재 공기 중의 수증기 입자 수 목표 계산
+                let previousCum = (currentHour === 0) ? 0 : this.hourlyData[currentHour - 1].cum;
+                let targetCum = (currentHour < 10) ? this.hourlyData[currentHour].cum : this.hourlyData[9].cum;
+                
+                // 1시간(60분) 동안 서서히 목표 공기 중의 수증기 입자 수에 도달하도록 계산
+                let expectedParticleCount = Math.floor(previousCum + (targetCum - previousCum) * (currentMinuteOfHour / 60));
+
+                // 증발 (현재 공기 중의 수증기 입자가 기대치보다 적으면 물에서 입자 방출)
+                while (this.particles.length < expectedParticleCount) {
+                    this.spawnParticle();
+                    this.waterHeight -= this.waterPerParticle;
+                }
+
+                // 이동 및 물리 충돌 로직
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    let p = this.particles[i];
+                    
+                    let speedLimit = this.temperature === 20 ? 1.5 : 2.5;
+                    p.vx += (Math.random() - 0.5) * 0.4; 
+                    p.vy += (Math.random() - 0.5) * 0.4;
+                    
+                    p.vx = Math.max(-speedLimit, Math.min(speedLimit, p.vx));
+                    p.vy = Math.max(-speedLimit, Math.min(speedLimit, p.vy));
+
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.life++;
+
+                    const radius = 6; 
+
+                    // 외벽 충돌
+                    if (p.x <= radius) { p.x = radius; p.vx = Math.abs(p.vx); }
+                    if (p.x >= this.width - radius) { p.x = this.width - radius; p.vx = -Math.abs(p.vx); }
+                    if (p.y <= radius) { p.y = radius; p.vy = Math.abs(p.vy); }
+                    if (p.y >= this.height - radius) { p.y = this.height - radius; p.vy = -Math.abs(p.vy); }
+
+                    // 수조 벽면 충돌
+                    let cupLeft = this.cupX;
+                    let cupRight = this.cupX + this.cupWidth;
+                    let cupTop = this.cupBottom - this.cupHeight;
+
+                    if (p.y + radius > cupTop) {
+                        if (p.x > cupLeft && p.x < cupRight) {
+                            if (p.x - radius < cupLeft) { p.x = cupLeft + radius; p.vx = Math.abs(p.vx); }
+                            else if (p.x + radius > cupRight) { p.x = cupRight - radius; p.vx = -Math.abs(p.vx); }
+                        } else {
+                            if (p.x + radius > cupLeft && p.x < cupLeft) { p.x = cupLeft - radius; p.vx = -Math.abs(p.vx); }
+                            else if (p.x - radius < cupRight && p.x > cupRight) { p.x = cupRight + radius; p.vx = Math.abs(p.vx); }
+                        }
+                    }
+
+                    // 응결 로직
+                    let waterSurfaceY = this.cupBottom - this.waterHeight;
+                    if (p.x > cupLeft && p.x < cupRight) {
+                        if (p.y + radius >= waterSurfaceY) {
+                            this.particles.splice(i, 1); 
+                            this.waterHeight += this.waterPerParticle; 
+                            continue; 
+                        }
+                    }
+                }
+
+                this.countEl.innerText = this.particles.length;
+            }
+
+            draw() {
+                this.ctx.clearRect(0, 0, this.width, this.height);
+
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.cupX, this.cupBottom - this.cupHeight);
+                this.ctx.lineTo(this.cupX, this.cupBottom);
+                this.ctx.lineTo(this.cupX + this.cupWidth, this.cupBottom);
+                this.ctx.lineTo(this.cupX + this.cupWidth, this.cupBottom - this.cupHeight);
+                this.ctx.lineWidth = 6;
+                this.ctx.strokeStyle = '#455a64'; 
+                this.ctx.stroke();
+
+                let currentWaterY = this.cupBottom - this.waterHeight;
+                this.ctx.fillStyle = 'rgba(33, 150, 243, 0.5)';
+                this.ctx.fillRect(this.cupX + 3, currentWaterY, this.cupWidth - 6, this.waterHeight);
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.cupX + 3, currentWaterY);
+                this.ctx.lineTo(this.cupX + this.cupWidth - 3, currentWaterY);
+                this.ctx.strokeStyle = 'rgba(33, 150, 243, 0.9)';
+                this.ctx.lineWidth = 4;
+                this.ctx.stroke();
+
+                // 공기 중의 수증기 입자 그리기
+                this.ctx.fillStyle = '#03a9f4';
+                for (let p of this.particles) {
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, 6, 0, Math.PI * 2); 
+                    this.ctx.fill();
+                    
+                    if(p.life < 15 && p.vy < 0) {
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(p.x, p.y);
+                        this.ctx.lineTo(p.x, p.y + 16);
+                        this.ctx.strokeStyle = 'rgba(255, 80, 80, 0.9)';
+                        this.ctx.lineWidth = 3;
+                        this.ctx.stroke();
+                    }
+                    else if (p.y > currentWaterY - 40 && p.vy > 0 && p.x > this.cupX && p.x < this.cupX + this.cupWidth) {
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(p.x, p.y);
+                        this.ctx.lineTo(p.x, p.y - 16);
+                        this.ctx.strokeStyle = 'rgba(50, 50, 255, 0.9)';
+                        this.ctx.lineWidth = 3;
+                        this.ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        const sim20 = new Simulator('canvas20', 'vaporCount20', 'table20', 20, tableData20);
+        const sim70 = new Simulator('canvas70', 'vaporCount70', 'table70', 70, tableData70);
+
+        sim20.draw();
+        sim70.draw();
+
+        const startBtn = document.getElementById('startBtn');
+
+        function animate() {
+            if (isRunning) {
+                frameCount++;
+                
+                // 1초(약 60프레임)마다 가상 시간 10분씩 증가
+                if (frameCount % 60 === 0) {
+                    virtualMinutes += 10;
+                    document.getElementById('timerDisplay').innerText = formatTime(virtualMinutes);
+                    
+                    // 정각(1시간)마다 제공된 표 데이터 출력
+                    if (virtualMinutes % 60 === 0 && virtualMinutes > 0) {
+                        let currentHour = virtualMinutes / 60;
+                        sim20.recordHourlyData(currentHour);
+                        sim70.recordHourlyData(currentHour);
+                    }
+
+                    if (virtualMinutes >= END_MINUTES) {
+                        isRunning = false;
+                        startBtn.innerText = '실험 완료';
+                        startBtn.disabled = true; 
+                        sim20.update(virtualMinutes); sim20.draw();
+                        sim70.update(virtualMinutes); sim70.draw();
+                        return; 
+                    }
+                }
+
+                sim20.update(virtualMinutes);
+                sim20.draw();
+                
+                sim70.update(virtualMinutes);
+                sim70.draw();
+                
+                animationId = requestAnimationFrame(animate);
+            }
+        }
+
+        startBtn.addEventListener('click', () => {
+            if (!isRunning) {
+                isRunning = true;
+                animate();
+                startBtn.innerText = '일시 정지';
+            } else {
+                isRunning = false;
+                cancelAnimationFrame(animationId);
+                startBtn.innerText = '실험 계속';
+            }
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            isRunning = false;
+            cancelAnimationFrame(animationId);
+            virtualMinutes = 0;
+            frameCount = 0;
+            document.getElementById('timerDisplay').innerText = "00:00";
+            
+            startBtn.disabled = false;
+            startBtn.innerText = '실험 시작';
+            
+            sim20.reset();
+            sim70.reset();
+        });
+    </script>
+</body>
+</html>
